@@ -421,7 +421,7 @@ async def update_pinned_message(chat_id: int, bot) -> None:
         done_tasks = []
 
         for i, task in enumerate(tasks):
-            assignee_name = await get_assignee_name(bot, chat_id, task.get('assignee', {}).get('id'))
+            assignee_name = await get_assignee_name(bot, chat_id, task.get('assignee', {}))
 
             if task['status'] == 'Не начата':
                 not_started_tasks.append(f"{i + 1}. {task['task']} ({assignee_name})")
@@ -484,7 +484,6 @@ async def update_pinned_message(chat_id: int, bot) -> None:
                     text="Произошла ошибка при обновлении списка задач. Пожалуйста, попробуйте позже."
                 )
 
-            # Обработка случая, когда нет задач
         if not tasks and chat_id in pinned_message_id:  # Добавлен этот блок
             try:
                 logging.info(f"Editing existing pinned message {pinned_message_id[chat_id]} (no tasks)")
