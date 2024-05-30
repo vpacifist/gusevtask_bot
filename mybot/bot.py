@@ -228,10 +228,10 @@ async def add_task(update: Update, context: CallbackContext) -> None:
         logging.warning("Empty task text provided")
 
 
-async def get_assignee_name(bot, chat_id, assignee_id):
-    if assignee_id is not None:  # Проверяем на None вместо пустого словаря
+async def get_assignee_name(bot, chat_id, assignee_data):
+    if assignee_data is not None and 'id' in assignee_data:  # Добавлена проверка на None
         try:
-            assignee_user = await bot.get_chat_member(chat_id, assignee_id)
+            assignee_user = await bot.get_chat_member(chat_id, assignee_data['id'])
             return assignee_user.user.full_name
         except BadRequest:
             return "Неизвестный пользователь"
