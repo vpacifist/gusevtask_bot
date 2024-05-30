@@ -377,17 +377,24 @@ async def update_pinned_message(chat_id: int, bot) -> None:
         done_tasks = []
 
         for i, task_item in enumerate(tasks):
-            formatted_task = await format_task_with_assignee(task_item, i, chat_id, bot)
+            assignee_name = await get_assignee_name(bot, chat_id, task_item.get('assignee', {}).get('id'))
+
             if task_item['status'] == 'Не начата':
-                not_started_tasks.append(formatted_task)
+                not_started_tasks.append(
+                    f"{i + 1}. {task_item['task']}" + (f" ({assignee_name})" if assignee_name else "")
+                )
             elif task_item['status'] == 'В процессе':
-                in_progress_tasks.append(formatted_task)
+                in_progress_tasks.append(
+                    f"{i + 1}. {task_item['task']}" + (f" ({assignee_name})" if assignee_name else "")
+                )
             elif task_item['status'] == 'На проверке':
-                review_tasks.append(formatted_task)
+                review_tasks.append(f"{i + 1}. {task_item['task']}" + (f" ({assignee_name})" if assignee_name else ""))
             elif task_item['status'] == 'Переделать':
-                rework_tasks.append(formatted_task)
+                rework_tasks.append(f"{i + 1}. {task_item['task']}" + (f" ({assignee_name})" if assignee_name else ""))
             elif task_item['status'] == 'Завершена':
-                done_tasks.append(formatted_task)
+                done_tasks.append(
+                    f"{i + 1}. <s>{task_item['task']}</s>" + (f" ({assignee_name})" if assignee_name else "")
+                )
 
         message = "<b>Список задач:</b>\n\n"
 
@@ -406,13 +413,26 @@ async def update_pinned_message(chat_id: int, bot) -> None:
 
         try:
             if chat_id in pinned_message_id:
-                logging.info(f"Editing existing pinned message {pinned_message_id[chat_id]}")
-                await bot.edit_message_text(
-                    chat_id=chat_id,
-                    message_id=pinned_message_id[chat_id],
-                    text=message,
-                    parse_mode=ParseMode.HTML
-                )
+                try:
+                    logging.info(f"Editing existing pinned message {pinned_message_id[chat_id]}")
+                    await bot.edit_message_text(
+                        chat_id=chat_id,
+                        message_id=pinned_message_id[chat_id],
+                        text=message,
+                        parse_mode=ParseMode.HTML
+                    )
+                except BadRequest:
+                    logging.warning("Pinned message not found. Sending a new one.")
+                    sent_message = await bot.send_message(
+                        chat_id=chat_id,
+                        text=message,
+                        parse_mode=ParseMode.HTML
+                    )
+                    pinned_message_id[chat_id] = sent_message.message_id
+                    await bot.pin_chat_message(
+                        chat_id=chat_id,
+                        message_id=sent_message.message_id
+                    )
             else:
                 logging.info("Sending new pinned message")
                 sent_message = await bot.send_message(
@@ -438,9 +458,8 @@ async def update_pinned_message(chat_id: int, bot) -> None:
                     chat_id=chat_id,
                     text="Произошла ошибка при обновлении списка задач. Пожалуйста, попробуйте позже."
                 )
-
-        # Обработка случая, когда нет задач
-        if not tasks and chat_id in pinned_message_id:
+    else:
+        if chat_id in pinned_message_id:
             try:
                 logging.info(f"Editing existing pinned message {pinned_message_id[chat_id]} (no tasks)")
                 await bot.edit_message_text(
