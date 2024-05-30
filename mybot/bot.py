@@ -338,13 +338,11 @@ async def done_task(update: Update, context: CallbackContext) -> None:
         chat_tasks[chat_id][task_number]['status'] = 'Завершена'
         await update_pinned_message(chat_id, context.bot)
         save_state(chat_tasks, pinned_message_id)
-        assignee = chat_tasks[chat_id][task_number].get('assignee', None)
+        assignee_data = chat_tasks[chat_id][task_number].get('assignee', None)
         assignee_name = ""
-        if assignee:
-            assignee_name = await get_assignee_name(context.bot, chat_id, assignee)
-        await update.message.reply_text(
-            f"Задача {task_number + 1} выполнена" + (f" ({assignee_name})" if assignee_name else "") + "."
-        )
+        if assignee_data and assignee_data.get('id'):
+            assignee_name = await get_assignee_name(context.bot, chat_id, assignee_data.get('id'))
+        await update.message.reply_text(f"Задача {task_number + 1} выполнена" + (f" ({assignee_name})" if assignee_name else "") + ".")
     else:
         await update.message.reply_text("Некорректный номер задачи.")
 
