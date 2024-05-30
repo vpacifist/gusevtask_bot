@@ -174,37 +174,38 @@ async def add_task(update: Update, context: CallbackContext) -> None:
     logging.info(f"Received /add command from {update.effective_user.username} in chat {update.effective_chat.id}")
     chat_id = update.effective_chat.id
 
-    # Разбиваем команду на слова
     command_parts = update.message.text.split()
 
     if len(command_parts) < 2:
         await update.message.reply_text(
             'Пожалуйста, укажите задачу в формате: /add <задача> или /add @<исполнитель> <задача>'
         )
+        logging.warning("No task text provided")
         return
 
     assignee_id = None
     assignee_name = None
     tasks_text = []
 
-    for part in command_parts[1:]:  # Пропускаем первую часть (команду /add)
-        if part.startswith("@"):  # Если начинается с @, это упоминание пользователя
+    for part in command_parts[1:]:
+        if part.startswith("@"):
             assignee_mention = part
-
             try:
-                user_id = int(assignee_mention.split()[0][3:-1])  # Извлекаем ID пользователя из упоминания
+                user_id = int(assignee_mention.split()[0][3:-1])
                 assignee_user = await context.bot.get_chat_member(chat_id, user_id)
                 assignee_id = assignee_user.user.id
-                assignee_name = assignee_user.user.full_name  # Сохраняем полное имя для отображения
+                assignee_name = assignee_user.user.full_name
+                logging.info(f"Assignee found: {assignee_name} (ID: {assignee_id})")
             except (BadRequest, ValueError):
                 await update.message.reply_text("Пользователь не найден.")
+                logging.error("Assignee not found")
                 return
         else:
-            tasks_text.append(part)  # Добавляем слово к тексту задачи
+            tasks_text.append(part)
 
-    tasks_text = " ".join(tasks_text)  # Объединяем слова задачи обратно в строку
+    tasks_text = " ".join(tasks_text)
 
-    if tasks_text.strip():  # Проверка на пустой текст задачи
+    if tasks_text.strip():
         if chat_id not in chat_tasks:
             chat_tasks[chat_id] = []
 
@@ -218,11 +219,14 @@ async def add_task(update: Update, context: CallbackContext) -> None:
                     'chat_id': chat_id,
                     'assignee': {'id': assignee_id, 'name': assignee_name}
                 })
+                logging.info(f"Task added: {task.strip()}")
 
         await update_pinned_message(chat_id, context.bot)
         save_state(chat_tasks, pinned_message_id)
     else:
         await update.message.reply_text('Пожалуйста, укажи задачу.')
+        logging.warning("Empty task text provided")
+
 
 
 async def get_assignee_name(bot, chat_id, assignee_id):
