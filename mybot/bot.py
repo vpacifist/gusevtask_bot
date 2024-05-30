@@ -401,7 +401,7 @@ async def done_task(update: Update, context: CallbackContext) -> None:
         chat_tasks[chat_id][task_number]['status'] = 'Завершена'
         await update_pinned_message(chat_id, context.bot)
         save_state(chat_tasks, pinned_message_id)
-        assignee_name = get_assignee_name(
+        assignee_name = await get_assignee_name(
             context.bot, chat_id, chat_tasks[chat_id][task_number].get('assignee', None)
         )
         await update.message.reply_text(f"Задача {task_number + 1} выполнена ({assignee_name}).")
