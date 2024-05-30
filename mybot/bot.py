@@ -350,20 +350,15 @@ async def done_task(update: Update, context: CallbackContext) -> None:
 
 
 # Функция для обновления закрепленного сообщения
-async def format_task_with_assignee(task_item, index, task_chat_id, task_bot):
-    assignee_name = None
-    if task_item.get('assignee'):
-        assignee_name = await get_assignee_name(task_bot, task_chat_id, task_item['assignee'].get('id'))
+async def format_task_with_assignee(task_item, index, bot, chat_id):
+    if task_item is None:
+        return ""
+    assignee = task_item.get('assignee', {})
+    assignee_name = await get_assignee_name(bot, chat_id, assignee.get('id')) if assignee else ""
     if task_item['status'] == 'Завершена':
-        if assignee_name:
-            return f"{index + 1}. <s>{task_item['task']} ({assignee_name})</s>"
-        else:
-            return f"{index + 1}. <s>{task_item['task']}</s>"
+        return f"{index + 1}. <s>{task_item['task']}</s>" + (f" ({assignee_name})" if assignee_name else "")
     else:
-        if assignee_name:
-            return f"{index + 1}. {task_item['task']} ({assignee_name})"
-        else:
-            return f"{index + 1}. {task_item['task']}"
+        return f"{index + 1}. {task_item['task']}" + (f" ({assignee_name})" if assignee_name else "")
 
 
 async def update_pinned_message(chat_id: int, bot) -> None:
@@ -377,24 +372,17 @@ async def update_pinned_message(chat_id: int, bot) -> None:
         done_tasks = []
 
         for i, task_item in enumerate(tasks):
-            assignee_name = await get_assignee_name(bot, chat_id, task_item.get('assignee', {}).get('id'))
-
+            formatted_task = await format_task_with_assignee(task_item, i, bot, chat_id)
             if task_item['status'] == 'Не начата':
-                not_started_tasks.append(
-                    f"{i + 1}. {task_item['task']}" + (f" ({assignee_name})" if assignee_name else "")
-                )
+                not_started_tasks.append(formatted_task)
             elif task_item['status'] == 'В процессе':
-                in_progress_tasks.append(
-                    f"{i + 1}. {task_item['task']}" + (f" ({assignee_name})" if assignee_name else "")
-                )
+                in_progress_tasks.append(formatted_task)
             elif task_item['status'] == 'На проверке':
-                review_tasks.append(f"{i + 1}. {task_item['task']}" + (f" ({assignee_name})" if assignee_name else ""))
+                review_tasks.append(formatted_task)
             elif task_item['status'] == 'Переделать':
-                rework_tasks.append(f"{i + 1}. {task_item['task']}" + (f" ({assignee_name})" if assignee_name else ""))
+                rework_tasks.append(formatted_task)
             elif task_item['status'] == 'Завершена':
-                done_tasks.append(
-                    f"{i + 1}. <s>{task_item['task']}</s>" + (f" ({assignee_name})" if assignee_name else "")
-                )
+                done_tasks.append(formatted_task)
 
         message = "<b>Список задач:</b>\n\n"
 
