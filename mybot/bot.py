@@ -2,6 +2,7 @@ import sqlite3
 import logging
 import atexit
 import json
+import os
 from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackContext
@@ -14,7 +15,7 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-TOKEN = '7366654801:AAHKDNUKs72KtPvmcK_NcS32O0on_diqfiE'  # Замените на ваш токен
+TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 
 # Словарь для хранения задач для каждого чата - ОБЪЯВЛЕНИЕ ГЛОБАЛЬНЫХ ПЕРЕМЕННЫХ
 chat_tasks = {}
