@@ -229,11 +229,12 @@ async def add_task(update: Update, context: CallbackContext) -> None:
 
 
 async def get_assignee_name(bot, chat_id, assignee_data):
-    if assignee_data is not None and 'id' in assignee_data:  # Добавлена проверка на None
+    if assignee_data is not None and 'id' in assignee_data:
         try:
             assignee_user = await bot.get_chat_member(chat_id, assignee_data['id'])
             return assignee_user.user.full_name
         except BadRequest:
+            logging.error(f"Ошибка при получении информации о пользователе: {assignee_data}")
             return "Неизвестный пользователь"
     else:
         return "Не назначен"
