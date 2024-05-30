@@ -17,9 +17,6 @@ logger = logging.getLogger(__name__)
 
 TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 
-# Проверяем, что токен был успешно получен
-if TOKEN is None:
-    raise RuntimeError("Токен для бота не был установлен как переменная окружения!")
 
 # Словарь для хранения задач для каждого чата - ОБЪЯВЛЕНИЕ ГЛОБАЛЬНЫХ ПЕРЕМЕННЫХ
 chat_tasks = {}
@@ -407,35 +404,29 @@ async def done_task(update: Update, context: CallbackContext) -> None:
 
 
 # Функция для обновления закрепленного сообщения
-async def update_pinned_message(chat_id, bot):
+async def update_pinned_message(chat_id: int, bot) -> None:
     logging.info(f"Updating pinned message for chat {chat_id}")
     tasks = chat_tasks.get(chat_id, [])
     if tasks:
-        not_started_tasks = [
-            f"{i + 1}. {task['task']} ({await get_assignee_name(bot, chat_id, task.get('assignee', {}).get('id'))})"
-            for i, task in enumerate(tasks)
-            if task['status'] == 'Не начата'
-        ]
-        in_progress_tasks = [
-            f"{i + 1}. {task['task']} ({get_assignee_name(bot, chat_id, task.get('assignee', {}).get('id'))})"
-            for i, task in enumerate(tasks)
-            if task['status'] == 'В процессе'
-        ]
-        review_tasks = [
-            f"{i + 1}. {task['task']} ({get_assignee_name(bot, chat_id, task.get('assignee', {}).get('id'))})"
-            for i, task in enumerate(tasks)
-            if task['status'] == 'На проверке'
-        ]
-        rework_tasks = [
-            f"{i + 1}. {task['task']} ({get_assignee_name(bot, chat_id, task.get('assignee', {}).get('id'))})"
-            for i, task in enumerate(tasks)
-            if task['status'] == 'Переделать'
-        ]
-        done_tasks = [
-            f"{i + 1}. <s>{task['task']} ({get_assignee_name(bot, chat_id, task.get('assignee', {}).get('id'))})</s>"
-            for i, task in enumerate(tasks)
-            if task['status'] == 'Завершена'
-        ]
+        not_started_tasks = []
+        in_progress_tasks = []
+        review_tasks = []
+        rework_tasks = []
+        done_tasks = []
+
+        for i, task in enumerate(tasks):
+            assignee_name = await get_assignee_name(bot, chat_id, task.get('assignee', {}).get('id'))
+
+            if task['status'] == 'Не начата':
+                not_started_tasks.append(f"{i + 1}. {task['task']} ({assignee_name})")
+            elif task['status'] == 'В процессе':
+                in_progress_tasks.append(f"{i + 1}. {task['task']} ({assignee_name})")
+            elif task['status'] == 'На проверке':
+                review_tasks.append(f"{i + 1}. {task['task']} ({assignee_name})")
+            elif task['status'] == 'Переделать':
+                rework_tasks.append(f"{i + 1}. {task['task']} ({assignee_name})")
+            elif task['status'] == 'Завершена':
+                done_tasks.append(f"{i + 1}. <s>{task['task']} ({assignee_name})</s>")
 
         message = "<b>Список задач:</b>\n\n"
 
