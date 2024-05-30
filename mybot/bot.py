@@ -238,9 +238,9 @@ async def get_assignee_name(bot, chat_id, assignee_id):
         return "Не назначен"
 
 
-def get_assignee_name_with_context(context, task):
+async def get_assignee_name_with_context(context, task):
     assignee_data = task.get('assignee', None)
-    return get_assignee_name(context.bot, context.effective_chat.id, assignee_data)
+    return await get_assignee_name(context.bot, context.effective_chat.id, assignee_data)
 
 
 # Обработчик команды /list
