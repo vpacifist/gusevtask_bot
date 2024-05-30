@@ -553,7 +553,7 @@ async def save_state_handler(update: Update, context: CallbackContext) -> None:
 
 # Обработчик команды /assign
 async def assign_task(update: Update, context: CallbackContext) -> None:
-    logging.info(f"Received /assign command from {update.effective_user.username} in chat {update.effective_chat.id}")
+    logging.info(f"Received /assign command from {update.effective_user.username} в чате {update.effective_chat.id}")
     chat_id = update.effective_chat.id
     try:
         args = context.args
@@ -561,7 +561,6 @@ async def assign_task(update: Update, context: CallbackContext) -> None:
         if len(args) != 2:
             raise ValueError("Неверное количество аргументов")
 
-        # Пробуем определить, что является номером задачи, а что - исполнителем
         try:
             task_number = int(args[0]) - 1
             assignee_mention = args[1]
@@ -572,11 +571,28 @@ async def assign_task(update: Update, context: CallbackContext) -> None:
         if not assignee_mention.startswith("@"):
             raise ValueError("Исполнитель должен быть указан через @")
 
+        assignee_username = assignee_mention[1:]  # Убираем символ "@"
+        assignee_user = None
+
         try:
-            user_id = int(assignee_mention.split()[0][3:-1])
-            assignee_user = await context.bot.get_chat_member(chat_id, user_id)
-            assignee_id = assignee_user.user.id
-            assignee_name = assignee_user.user.full_name
+            chat_members = await context.bot.get_chat_administrators(chat_id)
+            for member in chat_members:
+                if member.user.username == assignee_username:
+                    assignee_user = member.user
+                    break
+
+            if assignee_user is None:
+                chat_members = await context.bot.get_chat_members(chat_id)
+                for member in chat_members:
+                    if member.user.username == assignee_username:
+                        assignee_user = member.user
+                        break
+
+            if assignee_user is None:
+                raise ValueError("Пользователь не найден")
+
+            assignee_id = assignee_user.id
+            assignee_name = assignee_user.full_name
 
             logging.info(f"Assigning task {task_number + 1} to user {assignee_name} ({assignee_id})")
 
