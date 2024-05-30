@@ -20,6 +20,7 @@ TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 # Словарь для хранения задач для каждого чата - ОБЪЯВЛЕНИЕ ГЛОБАЛЬНЫХ ПЕРЕМЕННЫХ
 chat_tasks = {}
 pinned_message_id = {}
+DB_PATH = '/root/mybot/mydatabase.db'
 
 
 # Функция для создания таблиц в базе данных
@@ -45,7 +46,7 @@ def create_tables():
 
 
 def create_users_table():
-    with sqlite3.connect('/root/mybot/mydatabase.db') as conn:
+    with sqlite3.connect(DB_PATH) as conn:
         cursor = conn.cursor()
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS users (
@@ -65,7 +66,7 @@ def load_state():
     global chat_tasks, pinned_message_id
 
     try:
-        with sqlite3.connect('/root/mybot/mydatabase.db') as conn:
+        with sqlite3.connect(DB_PATH) as conn:
             logging.info("Connected to the database")
             cursor = conn.cursor()
 
@@ -104,7 +105,7 @@ def save_state(updated_chat_tasks, updated_pinned_message_id):
     global chat_tasks, pinned_message_id
 
     try:
-        with sqlite3.connect('/root/mybot/mydatabase.db') as conn:
+        with sqlite3.connect(DB_PATH) as conn:
             cursor = conn.cursor()
 
             # Сохраняем задачи
@@ -146,7 +147,7 @@ async def start(update: Update, context: CallbackContext) -> None:
 
     # Сохраняем chat_id и user_id в базу данных
     try:
-        with sqlite3.connect('/root/mybot/mydatabase.db') as conn:
+        with sqlite3.connect(DB_PATH) as conn:
             cursor = conn.cursor()
             cursor.execute(
                 "INSERT OR IGNORE INTO users (chat_id, user_id) VALUES (?, ?)",
