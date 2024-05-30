@@ -17,6 +17,10 @@ logger = logging.getLogger(__name__)
 
 TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 
+# Проверяем, что токен был успешно получен
+if TOKEN is None:
+    raise RuntimeError("Токен для бота не был установлен как переменная окружения!")
+
 # Словарь для хранения задач для каждого чата - ОБЪЯВЛЕНИЕ ГЛОБАЛЬНЫХ ПЕРЕМЕННЫХ
 chat_tasks = {}
 pinned_message_id = {}
