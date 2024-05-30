@@ -107,29 +107,35 @@ def save_state(updated_chat_tasks, updated_pinned_message_id):
     try:
         with sqlite3.connect(DB_PATH) as conn:
             cursor = conn.cursor()
+            logging.info("Connected to the database for saving state")
 
             # Сохраняем задачи
             cursor.execute("DELETE FROM tasks")
+            logging.info("Deleted all tasks from database")
             for chat_id, tasks in updated_chat_tasks.items():
                 for task in tasks:
                     cursor.execute(
                         "INSERT INTO tasks (task, status, done, chat_id, assignee) VALUES (?, ?, ?, ?, ?)",
                         (task['task'], task['status'], int(task['done']), chat_id, json.dumps(task['assignee']))
                     )
+            logging.info("Inserted updated tasks into database")
 
             # Сохраняем ID закрепленных сообщений
             cursor.execute("DELETE FROM pinned_messages")
+            logging.info("Deleted all pinned messages from database")
             for chat_id, message_id in updated_pinned_message_id.items():
                 cursor.execute(
                     "INSERT INTO pinned_messages (chat_id, message_id) VALUES (?, ?)",
                     (chat_id, message_id)
                 )
+            logging.info("Inserted updated pinned messages into database")
 
             conn.commit()
             logging.info("State saved successfully to database")
 
     except sqlite3.Error as e:
         logging.error(f"Error saving state to database: {e}")
+
 
 
 # Загрузка состояния при запуске
