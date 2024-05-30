@@ -371,17 +371,18 @@ async def update_pinned_message(chat_id: int, bot) -> None:
         rework_tasks = []
         done_tasks = []
 
-        for i, task_item in enumerate(tasks):
-            formatted_task = await format_task_with_assignee(task_item, i, bot, chat_id)
-            if task_item['status'] == 'Не начата':
+        for i, task in enumerate(tasks):
+            formatted_task = await format_task_with_assignee(task, i, bot, chat_id)
+
+            if task['status'] == 'Не начата':
                 not_started_tasks.append(formatted_task)
-            elif task_item['status'] == 'В процессе':
+            elif task['status'] == 'В процессе':
                 in_progress_tasks.append(formatted_task)
-            elif task_item['status'] == 'На проверке':
+            elif task['status'] == 'На проверке':
                 review_tasks.append(formatted_task)
-            elif task_item['status'] == 'Переделать':
+            elif task['status'] == 'Переделать':
                 rework_tasks.append(formatted_task)
-            elif task_item['status'] == 'Завершена':
+            elif task['status'] == 'Завершена':
                 done_tasks.append(formatted_task)
 
         message = "<b>Список задач:</b>\n\n"
@@ -401,26 +402,13 @@ async def update_pinned_message(chat_id: int, bot) -> None:
 
         try:
             if chat_id in pinned_message_id:
-                try:
-                    logging.info(f"Editing existing pinned message {pinned_message_id[chat_id]}")
-                    await bot.edit_message_text(
-                        chat_id=chat_id,
-                        message_id=pinned_message_id[chat_id],
-                        text=message,
-                        parse_mode=ParseMode.HTML
-                    )
-                except BadRequest:
-                    logging.warning("Pinned message not found. Sending a new one.")
-                    sent_message = await bot.send_message(
-                        chat_id=chat_id,
-                        text=message,
-                        parse_mode=ParseMode.HTML
-                    )
-                    pinned_message_id[chat_id] = sent_message.message_id
-                    await bot.pin_chat_message(
-                        chat_id=chat_id,
-                        message_id=sent_message.message_id
-                    )
+                logging.info(f"Editing existing pinned message {pinned_message_id[chat_id]}")
+                await bot.edit_message_text(
+                    chat_id=chat_id,
+                    message_id=pinned_message_id[chat_id],
+                    text=message,
+                    parse_mode=ParseMode.HTML
+                )
             else:
                 logging.info("Sending new pinned message")
                 sent_message = await bot.send_message(
@@ -446,8 +434,9 @@ async def update_pinned_message(chat_id: int, bot) -> None:
                     chat_id=chat_id,
                     text="Произошла ошибка при обновлении списка задач. Пожалуйста, попробуйте позже."
                 )
-    else:
-        if chat_id in pinned_message_id:
+
+            # Обработка случая, когда нет задач
+        if not tasks and chat_id in pinned_message_id:
             try:
                 logging.info(f"Editing existing pinned message {pinned_message_id[chat_id]} (no tasks)")
                 await bot.edit_message_text(
@@ -468,27 +457,27 @@ async def list_tasks(update: Update, context: CallbackContext) -> None:
         message = "<b>Список задач:</b>\n\n"
 
         not_started_tasks = [
-            await format_task_with_assignee(task, i, chat_id, context.bot)
+            await format_task_with_assignee(task, i, context.bot, chat_id)
             for i, task in enumerate(tasks)
             if task['status'] == 'Не начата'
         ]
         in_progress_tasks = [
-            await format_task_with_assignee(task, i, chat_id, context.bot)
+            await format_task_with_assignee(task, i, context.bot, chat_id)
             for i, task in enumerate(tasks)
             if task['status'] == 'В процессе'
         ]
         review_tasks = [
-            await format_task_with_assignee(task, i, chat_id, context.bot)
+            await format_task_with_assignee(task, i, context.bot, chat_id)
             for i, task in enumerate(tasks)
             if task['status'] == 'На проверке'
         ]
         rework_tasks = [
-            await format_task_with_assignee(task, i, chat_id, context.bot)
+            await format_task_with_assignee(task, i, context.bot, chat_id)
             for i, task in enumerate(tasks)
             if task['status'] == 'Переделать'
         ]
         done_tasks = [
-            await format_task_with_assignee(task, i, chat_id, context.bot)
+            await format_task_with_assignee(task, i, context.bot, chat_id)
             for i, task in enumerate(tasks)
             if task['status'] == 'Завершена'
         ]
