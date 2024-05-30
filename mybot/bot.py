@@ -63,6 +63,7 @@ create_users_table()
 
 
 # Функция для загрузки состояния с обработкой ошибок
+# Функция для загрузки состояния с обработкой ошибок
 def load_state():
     global chat_tasks, pinned_message_id
 
@@ -78,7 +79,11 @@ def load_state():
             logging.info(f"Fetched {len(rows)} tasks from database")
             for row in rows:
                 task_id, task, status, done, chat_id, assignee_json = row
-                assignee = json.loads(assignee_json) if assignee_json else None
+                try:
+                    assignee = json.loads(assignee_json) if assignee_json else None
+                except json.JSONDecodeError:
+                    assignee = None
+
                 if chat_id not in chat_tasks:
                     chat_tasks[chat_id] = []
                 chat_tasks[chat_id].append({'task': task, 'status': status, 'done': bool(done), 'assignee': assignee})
