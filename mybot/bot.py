@@ -250,69 +250,6 @@ async def get_assignee_name_with_context(context, task):
     return await get_assignee_name(context.bot, context.effective_chat.id, assignee_data)
 
 
-# Обработчик команды /list
-# Обработчик команды /list
-async def list_tasks(update: Update, context: CallbackContext) -> None:
-    logging.info(f"Received /list command from {update.effective_user.username} in chat {update.effective_chat.id}")
-
-    chat_id = update.effective_chat.id
-    tasks = chat_tasks.get(chat_id, [])
-    if tasks:
-        message = "<b>Список задач:</b>\n\n"
-
-        async def format_task_with_assignee(task, index):
-            assignee_name = "Не назначен"
-            if task.get('assignee'):
-                assignee_name = await get_assignee_name(context.bot, chat_id, task['assignee'].get('id'))
-            if task['status'] == 'Завершена':
-                return f"{index + 1}. <s>{task['task']} ({assignee_name})</s>"
-            else:
-                return f"{index + 1}. {task['task']} ({assignee_name})"
-
-        not_started_tasks = [
-            await format_task_with_assignee(task, i)
-            for i, task in enumerate(tasks)
-            if task['status'] == 'Не начата'
-        ]
-        in_progress_tasks = [
-            await format_task_with_assignee(task, i)
-            for i, task in enumerate(tasks)
-            if task['status'] == 'В процессе'
-        ]
-        review_tasks = [
-            await format_task_with_assignee(task, i)
-            for i, task in enumerate(tasks)
-            if task['status'] == 'На проверке'
-        ]
-        rework_tasks = [
-            await format_task_with_assignee(task, i)
-            for i, task in enumerate(tasks)
-            if task['status'] == 'Переделать'
-        ]
-        done_tasks = [
-            await format_task_with_assignee(task, i)
-            for i, task in enumerate(tasks)
-            if task['status'] == 'Завершена'
-        ]
-
-        if not_started_tasks:
-            message += "<b>Не начаты:</b>\n" + "\n".join(not_started_tasks) + "\n\n"
-        if in_progress_tasks:
-            message += "<b>В процессе:</b>\n" + "\n".join(in_progress_tasks) + "\n\n"
-        if review_tasks:
-            message += "<b>На проверке:</b>\n" + "\n".join(review_tasks) + "\n\n"
-        if rework_tasks:
-            message += "<b>Переделать:</b>\n" + "\n".join(rework_tasks) + "\n\n"
-        if done_tasks:
-            message += "<b>Завершены:</b>\n" + "\n".join(done_tasks) + "\n\n"
-
-        await update.message.reply_text(message, parse_mode=ParseMode.HTML)
-        logging.info(f"Sent task list to chat {chat_id}")
-    else:
-        await update.message.reply_text("Нет задач.", parse_mode=ParseMode.HTML)
-        logging.info(f"No tasks found for chat {chat_id}")
-
-
 # Обработчик команды /delete
 async def delete_task(update: Update, context: CallbackContext) -> None:
     chat_id = update.effective_chat.id
@@ -401,14 +338,34 @@ async def done_task(update: Update, context: CallbackContext) -> None:
         chat_tasks[chat_id][task_number]['status'] = 'Завершена'
         await update_pinned_message(chat_id, context.bot)
         save_state(chat_tasks, pinned_message_id)
-        assignee_data = chat_tasks[chat_id][task_number].get('assignee', {})
-        assignee_name = await get_assignee_name(context.bot, chat_id, assignee_data.get('id'))
-        await update.message.reply_text(f"Задача {task_number + 1} выполнена ({assignee_name}).")
+        assignee = chat_tasks[chat_id][task_number].get('assignee', None)
+        assignee_name = ""
+        if assignee:
+            assignee_name = await get_assignee_name(context.bot, chat_id, assignee)
+        await update.message.reply_text(
+            f"Задача {task_number + 1} выполнена" + (f" ({assignee_name})" if assignee_name else "") + "."
+        )
     else:
         await update.message.reply_text("Некорректный номер задачи.")
 
 
 # Функция для обновления закрепленного сообщения
+async def format_task_with_assignee(task_item, index, task_chat_id, task_bot):
+    assignee_name = None
+    if task_item.get('assignee'):
+        assignee_name = await get_assignee_name(task_bot, task_chat_id, task_item['assignee'].get('id'))
+    if task_item['status'] == 'Завершена':
+        if assignee_name:
+            return f"{index + 1}. <s>{task_item['task']} ({assignee_name})</s>"
+        else:
+            return f"{index + 1}. <s>{task_item['task']}</s>"
+    else:
+        if assignee_name:
+            return f"{index + 1}. {task_item['task']} ({assignee_name})"
+        else:
+            return f"{index + 1}. {task_item['task']}"
+
+
 async def update_pinned_message(chat_id: int, bot) -> None:
     logging.info(f"Updating pinned message for chat {chat_id}")
     tasks = chat_tasks.get(chat_id, [])
@@ -419,21 +376,18 @@ async def update_pinned_message(chat_id: int, bot) -> None:
         rework_tasks = []
         done_tasks = []
 
-        for i, task in enumerate(tasks):
-            assignee_name = "Не назначен"
-            if task.get('assignee') and task['assignee'].get('id'):
-                assignee_name = await get_assignee_name(bot, chat_id, task['assignee']['id'])
-
-            if task['status'] == 'Не начата':
-                not_started_tasks.append(f"{i + 1}. {task['task']} ({assignee_name})")
-            elif task['status'] == 'В процессе':
-                in_progress_tasks.append(f"{i + 1}. {task['task']} ({assignee_name})")
-            elif task['status'] == 'На проверке':
-                review_tasks.append(f"{i + 1}. {task['task']} ({assignee_name})")
-            elif task['status'] == 'Переделать':
-                rework_tasks.append(f"{i + 1}. {task['task']} ({assignee_name})")
-            elif task['status'] == 'Завершена':
-                done_tasks.append(f"{i + 1}. <s>{task['task']} ({assignee_name})</s>")
+        for i, task_item in enumerate(tasks):
+            formatted_task = await format_task_with_assignee(task_item, i, chat_id, bot)
+            if task_item['status'] == 'Не начата':
+                not_started_tasks.append(formatted_task)
+            elif task_item['status'] == 'В процессе':
+                in_progress_tasks.append(formatted_task)
+            elif task_item['status'] == 'На проверке':
+                review_tasks.append(formatted_task)
+            elif task_item['status'] == 'Переделать':
+                rework_tasks.append(formatted_task)
+            elif task_item['status'] == 'Завершена':
+                done_tasks.append(formatted_task)
 
         message = "<b>Список задач:</b>\n\n"
 
@@ -460,10 +414,6 @@ async def update_pinned_message(chat_id: int, bot) -> None:
                     parse_mode=ParseMode.HTML
                 )
             else:
-                raise BadRequest("Pinned message not found")
-        except (TelegramError, BadRequest) as e:
-            logging.error(f"Error updating pinned message: {e}")
-            try:
                 logging.info("Sending new pinned message")
                 sent_message = await bot.send_message(
                     chat_id=chat_id,
@@ -475,20 +425,21 @@ async def update_pinned_message(chat_id: int, bot) -> None:
                     chat_id=chat_id,
                     message_id=sent_message.message_id
                 )
-            except TelegramError as e:
-                logging.error(f"Error sending new pinned message: {e}")
-                if isinstance(e, (BadRequest, Forbidden)):
-                    await bot.send_message(
-                        chat_id=chat_id,
-                        text="⚠️ У меня недостаточно прав для закрепления сообщений. "
-                             "Пожалуйста, сделайте меня администратором и дайте право закреплять сообщения. 🙏"
-                    )
-                else:
-                    await bot.send_message(
-                        chat_id=chat_id,
-                        text="Произошла ошибка при обновлении списка задач. Пожалуйста, попробуйте позже."
-                    )
+        except TelegramError as e:
+            logging.error(f"Error updating pinned message: {e}")
+            if isinstance(e, (BadRequest, Forbidden)):
+                await bot.send_message(
+                    chat_id=chat_id,
+                    text="⚠️ У меня недостаточно прав для закрепления сообщений. "
+                         "Пожалуйста, сделайте меня администратором и дайте право закреплять сообщения. 🙏"
+                )
+            else:
+                await bot.send_message(
+                    chat_id=chat_id,
+                    text="Произошла ошибка при обновлении списка задач. Пожалуйста, попробуйте позже."
+                )
 
+        # Обработка случая, когда нет задач
         if not tasks and chat_id in pinned_message_id:
             try:
                 logging.info(f"Editing existing pinned message {pinned_message_id[chat_id]} (no tasks)")
@@ -499,6 +450,58 @@ async def update_pinned_message(chat_id: int, bot) -> None:
                 )
             except (BadRequest, Forbidden) as e:
                 logging.error(f"Failed to edit pinned message: {e}")
+
+
+async def list_tasks(update: Update, context: CallbackContext) -> None:
+    logging.info(f"Received /list command from {update.effective_user.username} in chat {update.effective_chat.id}")
+
+    chat_id = update.effective_chat.id
+    tasks = chat_tasks.get(chat_id, [])
+    if tasks:
+        message = "<b>Список задач:</b>\n\n"
+
+        not_started_tasks = [
+            await format_task_with_assignee(task, i, chat_id, context.bot)
+            for i, task in enumerate(tasks)
+            if task['status'] == 'Не начата'
+        ]
+        in_progress_tasks = [
+            await format_task_with_assignee(task, i, chat_id, context.bot)
+            for i, task in enumerate(tasks)
+            if task['status'] == 'В процессе'
+        ]
+        review_tasks = [
+            await format_task_with_assignee(task, i, chat_id, context.bot)
+            for i, task in enumerate(tasks)
+            if task['status'] == 'На проверке'
+        ]
+        rework_tasks = [
+            await format_task_with_assignee(task, i, chat_id, context.bot)
+            for i, task in enumerate(tasks)
+            if task['status'] == 'Переделать'
+        ]
+        done_tasks = [
+            await format_task_with_assignee(task, i, chat_id, context.bot)
+            for i, task in enumerate(tasks)
+            if task['status'] == 'Завершена'
+        ]
+
+        if not_started_tasks:
+            message += "<b>Не начаты:</b>\n" + "\n".join(not_started_tasks) + "\n\n"
+        if in_progress_tasks:
+            message += "<b>В процессе:</b>\n" + "\n".join(in_progress_tasks) + "\n\n"
+        if review_tasks:
+            message += "<b>На проверке:</b>\n" + "\n".join(review_tasks) + "\n\n"
+        if rework_tasks:
+            message += "<b>Переделать:</b>\n" + "\n".join(rework_tasks) + "\n\n"
+        if done_tasks:
+            message += "<b>Завершены:</b>\n" + "\n".join(done_tasks) + "\n\n"
+
+        await update.message.reply_text(message, parse_mode=ParseMode.HTML)
+        logging.info(f"Sent task list to chat {chat_id}")
+    else:
+        await update.message.reply_text("Нет задач.", parse_mode=ParseMode.HTML)
+        logging.info(f"No tasks found for chat {chat_id}")
 
 
 async def help_command(update: Update, _context: CallbackContext) -> None:
@@ -562,21 +565,23 @@ async def assign_task(update: Update, context: CallbackContext) -> None:
         if not assignee_mention.startswith("@"):
             raise ValueError("Исполнитель должен быть указан через @")
 
-        assignee_username = assignee_mention[1:]  # Убираем символ "@"
         try:
-            chat_member = await context.bot.get_chat_member(chat_id, update.effective_user.id)
-            assignee_id = chat_member.user.id
-            assignee_full_name = chat_member.user.full_name
-            logging.info(f"Assigning task {task_number + 1} to user {assignee_full_name} ({assignee_id})")
+            user_id = int(assignee_mention.split()[0][3:-1])
+            assignee_user = await context.bot.get_chat_member(chat_id, user_id)
+            assignee_id = assignee_user.user.id
+            assignee_name = assignee_user.user.full_name
+
+            logging.info(f"Assigning task {task_number + 1} to user {assignee_name} ({assignee_id})")
+
         except (BadRequest, ValueError):
             await update.message.reply_text("Пользователь не найден.")
             return
 
         if chat_id in chat_tasks and 0 <= task_number < len(chat_tasks[chat_id]):
-            chat_tasks[chat_id][task_number]['assignee'] = {'id': assignee_id, 'name': assignee_full_name}
+            chat_tasks[chat_id][task_number]['assignee'] = {'id': assignee_id, 'name': assignee_name}
             await update_pinned_message(chat_id, context.bot)
             save_state(chat_tasks, pinned_message_id)
-            await update.message.reply_text(f"Задача {task_number + 1} назначена на {assignee_full_name}.")
+            await update.message.reply_text(f"Задача {task_number + 1} назначена на {assignee_name}.")
         else:
             await update.message.reply_text("Некорректный номер задачи или исполнитель.")
     except (IndexError, ValueError) as e:
