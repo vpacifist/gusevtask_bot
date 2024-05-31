@@ -1,0 +1,53 @@
+From 28e5b462fdf471ca3c7381a60ce3c67c687c57f8 Mon Sep 17 00:00:00 2001
+From: vovagusev <v@vovagusev.ru>
+Date: Thu, 30 May 2024 22:30:20 +0400
+Subject: [PATCH 14/28] Add error handling for missing pinned messages in
+ update_pinned_message
+
+---
+ mybot/bot.py | 14 +++++++++++---
+ 1 file changed, 11 insertions(+), 3 deletions(-)
+
+diff --git a/mybot/bot.py b/mybot/bot.py
+index 7027cb8..e800f76 100644
+--- a/mybot/bot.py
++++ b/mybot/bot.py
+@@ -421,7 +421,7 @@ async def update_pinned_message(chat_id: int, bot) -> None:
+         done_tasks = []
+ 
+         for i, task in enumerate(tasks):
+-            assignee_name = await get_assignee_name(bot, chat_id, task.get('assignee', {}))
++            assignee_name = await get_assignee_name(bot, chat_id, task.get('assignee', {}).get('id'))
+ 
+             if task['status'] == 'Не начата':
+                 not_started_tasks.append(f"{i + 1}. {task['task']} ({assignee_name})")
+@@ -484,16 +484,24 @@ async def update_pinned_message(chat_id: int, bot) -> None:
+                     text="Произошла ошибка при обновлении списка задач. Пожалуйста, попробуйте позже."
+                 )
+ 
++        # Обработка случая, когда нет задач
+         if not tasks and chat_id in pinned_message_id:  # Добавлен этот блок
+             try:
+                 logging.info(f"Editing existing pinned message {pinned_message_id[chat_id]} (no tasks)")
+                 await bot.edit_message_text(
+                     chat_id=chat_id,
+-                    message_id=pinned_message_id[chat_id],
+-                    text="Нет задач."
++                    message_id=pinned_message_id[chat_id], text="Нет задач."
+                 )
+             except (BadRequest, Forbidden) as e:
+                 logging.error(f"Failed to edit pinned message: {e}")
++    else:
++        # Если нет задач и сообщение существует, удаляем его
++        if chat_id in pinned_message_id:
++            try:
++                await bot.unpin_chat_message(chat_id=chat_id, message_id=pinned_message_id[chat_id])
++                del pinned_message_id[chat_id]
++            except TelegramError as e:
++                logging.error(f"Error unpinning message: {e}")
+ 
+ 
+ async def help_command(update: Update, _context: CallbackContext) -> None:
+-- 
+2.45.1.windows.1
+

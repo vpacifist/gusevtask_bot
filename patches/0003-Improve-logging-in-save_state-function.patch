@@ -1,0 +1,53 @@
+From e86c7c958f92f9fe92438f5d6b7ebc240b572b5a Mon Sep 17 00:00:00 2001
+From: vovagusev <v@vovagusev.ru>
+Date: Thu, 30 May 2024 16:25:56 +0400
+Subject: [PATCH 03/28] Improve logging in save_state function
+
+---
+ mybot/bot.py | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/mybot/bot.py b/mybot/bot.py
+index 850ba97..150cad8 100644
+--- a/mybot/bot.py
++++ b/mybot/bot.py
+@@ -107,23 +107,28 @@ def save_state(updated_chat_tasks, updated_pinned_message_id):
+     try:
+         with sqlite3.connect(DB_PATH) as conn:
+             cursor = conn.cursor()
++            logging.info("Connected to the database for saving state")
+ 
+             # Сохраняем задачи
+             cursor.execute("DELETE FROM tasks")
++            logging.info("Deleted all tasks from database")
+             for chat_id, tasks in updated_chat_tasks.items():
+                 for task in tasks:
+                     cursor.execute(
+                         "INSERT INTO tasks (task, status, done, chat_id, assignee) VALUES (?, ?, ?, ?, ?)",
+                         (task['task'], task['status'], int(task['done']), chat_id, json.dumps(task['assignee']))
+                     )
++            logging.info("Inserted updated tasks into database")
+ 
+             # Сохраняем ID закрепленных сообщений
+             cursor.execute("DELETE FROM pinned_messages")
++            logging.info("Deleted all pinned messages from database")
+             for chat_id, message_id in updated_pinned_message_id.items():
+                 cursor.execute(
+                     "INSERT INTO pinned_messages (chat_id, message_id) VALUES (?, ?)",
+                     (chat_id, message_id)
+                 )
++            logging.info("Inserted updated pinned messages into database")
+ 
+             conn.commit()
+             logging.info("State saved successfully to database")
+@@ -132,6 +137,7 @@ def save_state(updated_chat_tasks, updated_pinned_message_id):
+         logging.error(f"Error saving state to database: {e}")
+ 
+ 
++
+ # Загрузка состояния при запуске
+ load_state()
+ atexit.register(lambda: save_state(chat_tasks, pinned_message_id))
+-- 
+2.45.1.windows.1
+

@@ -1,0 +1,48 @@
+From b97f5c2041ea431aad954d08988617e938964d1c Mon Sep 17 00:00:00 2001
+From: vovagusev <v@vovagusev.ru>
+Date: Thu, 30 May 2024 23:01:52 +0400
+Subject: [PATCH 19/28] Fix task assignment logic to correctly extract user
+ information
+
+---
+ mybot/bot.py | 16 +++++++---------
+ 1 file changed, 7 insertions(+), 9 deletions(-)
+
+diff --git a/mybot/bot.py b/mybot/bot.py
+index a4eaa2b..5066e23 100644
+--- a/mybot/bot.py
++++ b/mybot/bot.py
+@@ -562,23 +562,21 @@ async def assign_task(update: Update, context: CallbackContext) -> None:
+         if not assignee_mention.startswith("@"):
+             raise ValueError("Исполнитель должен быть указан через @")
+ 
++        assignee_username = assignee_mention[1:]  # Убираем символ "@"
+         try:
+-            user_id = int(assignee_mention.split()[0][3:-1])
+-            assignee_user = await context.bot.get_chat_member(chat_id, user_id)
+-            assignee_id = assignee_user.user.id
+-            assignee_name = assignee_user.user.full_name
+-
+-            logging.info(f"Assigning task {task_number + 1} to user {assignee_name} ({assignee_id})")  # Логирование
+-
++            chat_member = await context.bot.get_chat_member(chat_id, update.effective_user.id)
++            assignee_id = chat_member.user.id
++            assignee_full_name = chat_member.user.full_name
++            logging.info(f"Assigning task {task_number + 1} to user {assignee_full_name} ({assignee_id})")
+         except (BadRequest, ValueError):
+             await update.message.reply_text("Пользователь не найден.")
+             return
+ 
+         if chat_id in chat_tasks and 0 <= task_number < len(chat_tasks[chat_id]):
+-            chat_tasks[chat_id][task_number]['assignee'] = {'id': assignee_id, 'name': assignee_name}
++            chat_tasks[chat_id][task_number]['assignee'] = {'id': assignee_id, 'name': assignee_full_name}
+             await update_pinned_message(chat_id, context.bot)
+             save_state(chat_tasks, pinned_message_id)
+-            await update.message.reply_text(f"Задача {task_number + 1} назначена на {assignee_name}.")
++            await update.message.reply_text(f"Задача {task_number + 1} назначена на {assignee_full_name}.")
+         else:
+             await update.message.reply_text("Некорректный номер задачи или исполнитель.")
+     except (IndexError, ValueError) as e:
+-- 
+2.45.1.windows.1
+

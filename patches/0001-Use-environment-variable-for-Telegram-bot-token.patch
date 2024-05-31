@@ -1,0 +1,33 @@
+From 121b89e4de4edaf3a33061743f2a3bea9b2914a0 Mon Sep 17 00:00:00 2001
+From: vovagusev <v@vovagusev.ru>
+Date: Thu, 30 May 2024 16:16:50 +0400
+Subject: [PATCH 01/28] Use environment variable for Telegram bot token
+
+---
+ mybot/bot.py | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/bot.py b/bot.py
+index 4a2aa01..609ee8a 100644
+--- a/mybot/bot.py
++++ b/mybot/bot.py
+@@ -2,6 +2,7 @@ import sqlite3
+ import logging
+ import atexit
+ import json
++import os
+ from telegram import Update
+ from telegram.constants import ParseMode
+ from telegram.ext import ApplicationBuilder, CommandHandler, CallbackContext
+@@ -14,7 +15,7 @@ logging.basicConfig(
+ 
+ logger = logging.getLogger(__name__)
+ 
+-TOKEN = '7366654801:AAHKDNUKs72KtPvmcK_NcS32O0on_diqfiE'  # Замените на ваш токен
++TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+ 
+ # Словарь для хранения задач для каждого чата - ОБЪЯВЛЕНИЕ ГЛОБАЛЬНЫХ ПЕРЕМЕННЫХ
+ chat_tasks = {}
+-- 
+2.45.1.windows.1
+

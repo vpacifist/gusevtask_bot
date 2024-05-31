@@ -1,0 +1,35 @@
+From 28b49aa3ccbcbbe52969fe5bd8a8e6b340291163 Mon Sep 17 00:00:00 2001
+From: vovagusev <v@vovagusev.ru>
+Date: Thu, 30 May 2024 22:19:07 +0400
+Subject: [PATCH 13/28] Refactor get_assignee_name function to correctly fetch
+ assignee name
+
+---
+ mybot/bot.py | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/mybot/bot.py b/mybot/bot.py
+index 309e8cb..7027cb8 100644
+--- a/mybot/bot.py
++++ b/mybot/bot.py
+@@ -233,13 +233,13 @@ async def add_task(update: Update, context: CallbackContext) -> None:
+         logging.warning("Empty task text provided")
+ 
+ 
+-async def get_assignee_name(bot, chat_id, assignee_data):
+-    if assignee_data is not None and 'id' in assignee_data:
++async def get_assignee_name(bot, chat_id, assignee_id):
++    if assignee_id:
+         try:
+-            assignee_user = await bot.get_chat_member(chat_id, assignee_data['id'])
++            assignee_user = await bot.get_chat_member(chat_id, assignee_id)
+             return assignee_user.user.full_name
+         except BadRequest:
+-            logging.error(f"Ошибка при получении информации о пользователе: {assignee_data}")
++            logging.error(f"Ошибка при получении информации о пользователе: {assignee_id}")
+             return "Неизвестный пользователь"
+     else:
+         return "Не назначен"
+-- 
+2.45.1.windows.1
+

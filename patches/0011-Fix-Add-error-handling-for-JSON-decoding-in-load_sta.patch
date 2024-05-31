@@ -1,0 +1,38 @@
+From 12386d8cf7e8b9ace3eae6f91807362f94457731 Mon Sep 17 00:00:00 2001
+From: vovagusev <v@vovagusev.ru>
+Date: Thu, 30 May 2024 22:12:24 +0400
+Subject: [PATCH 11/28] Fix: Add error handling for JSON decoding in load_state
+ function
+
+---
+ mybot/bot.py | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/mybot/bot.py b/mybot/bot.py
+index e6c8024..819bfd8 100644
+--- a/mybot/bot.py
++++ b/mybot/bot.py
+@@ -62,6 +62,7 @@ create_tables()
+ create_users_table()
+ 
+ 
++# Функция для загрузки состояния с обработкой ошибок
+ # Функция для загрузки состояния с обработкой ошибок
+ def load_state():
+     global chat_tasks, pinned_message_id
+@@ -78,7 +79,11 @@ def load_state():
+             logging.info(f"Fetched {len(rows)} tasks from database")
+             for row in rows:
+                 task_id, task, status, done, chat_id, assignee_json = row
+-                assignee = json.loads(assignee_json) if assignee_json else None
++                try:
++                    assignee = json.loads(assignee_json) if assignee_json else None
++                except json.JSONDecodeError:
++                    assignee = None
++
+                 if chat_id not in chat_tasks:
+                     chat_tasks[chat_id] = []
+                 chat_tasks[chat_id].append({'task': task, 'status': status, 'done': bool(done), 'assignee': assignee})
+-- 
+2.45.1.windows.1
+

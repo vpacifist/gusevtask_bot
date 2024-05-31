@@ -1,0 +1,101 @@
+From 478b71874dfd70c9280c883393365a46e5a9585f Mon Sep 17 00:00:00 2001
+From: vovagusev <v@vovagusev.ru>
+Date: Fri, 31 May 2024 03:10:55 +0400
+Subject: [PATCH 27/28] Fix assignee display and clickable links in task list.
+
+---
+ mybot/bot.py | 34 ++++++++++++++++++++--------------
+ 1 file changed, 20 insertions(+), 14 deletions(-)
+
+diff --git a/mybot/bot.py b/mybot/bot.py
+index 58ebd14..7be96d7 100644
+--- a/mybot/bot.py
++++ b/mybot/bot.py
+@@ -342,26 +342,29 @@ async def done_task(update: Update, context: CallbackContext) -> None:
+         assignee_name = ""
+         if assignee_data and assignee_data.get('id'):
+             assignee_name = await get_assignee_name(context.bot, chat_id, assignee_data.get('id'))
+-        await update.message.reply_text(f"Задача {task_number + 1} выполнена" + (f" ({assignee_name})" if assignee_name else "") + ".")
++        await update.message.reply_text(
++            f"Задача {task_number + 1} выполнена" + (f" ({assignee_name})" if assignee_name else "") + "."
++        )
+     else:
+         await update.message.reply_text("Некорректный номер задачи.")
+ 
+ 
+ # Функция для обновления закрепленного сообщения
+ async def format_task_with_assignee(task_item, index, bot, chat_id):
+-    logging.info(f"Formatting task {task_item}")
+     if task_item is None:
+         return ""
+-    assignee = task_item.get('assignee')
+-    assignee_name = await get_assignee_name(bot, chat_id, assignee.get('id')) if assignee and assignee.get(
+-        'id') is not None else ""
+-    if task_item['status'] == 'Завершена':
+-        result = f"{index + 1}. <s>{task_item['task']}</s>" + (f" ({assignee_name})" if assignee_name else "")
++    assignee = task_item.get('assignee', {})
++    if not assignee or assignee.get('id') is None:
++        assignee_name = ""
+     else:
+-        result = f"{index + 1}. {task_item['task']}" + (f" ({assignee_name})" if assignee_name else "")
++        assignee_name = await get_assignee_name(bot, chat_id, assignee.get('id'))
+ 
+-    logging.info(f"Formatted task: {result}")
+-    return result
++    if task_item['status'] == 'Завершена':
++        return f"{index + 1}. <s>{task_item['task']}</s>" + (
++            f" (<a href=\"tg://user?id={assignee.get('id')}\">{assignee_name}</a>)" if assignee_name else "")
++    else:
++        return f"{index + 1}. {task_item['task']}" + (
++            f" (<a href=\"tg://user?id={assignee.get('id')}\">{assignee_name}</a>)" if assignee_name else "")
+ 
+ 
+ async def update_pinned_message(chat_id: int, bot) -> None:
+@@ -375,7 +378,9 @@ async def update_pinned_message(chat_id: int, bot) -> None:
+         done_tasks = []
+ 
+         for i, task_item in enumerate(tasks):
++            logging.info(f"Formatting task {task_item}")
+             formatted_task = await format_task_with_assignee(task_item, i, bot, chat_id)
++            logging.info(f"Formatted task: {formatted_task}")
+             if task_item['status'] == 'Не начата':
+                 not_started_tasks.append(formatted_task)
+             elif task_item['status'] == 'В процессе':
+@@ -409,14 +414,14 @@ async def update_pinned_message(chat_id: int, bot) -> None:
+                     chat_id=chat_id,
+                     message_id=pinned_message_id[chat_id],
+                     text=message,
+-                    parse_mode=ParseMode.HTML
++                    parse_mode=ParseMode.HTML  # Убедитесь, что здесь указан режим разбора HTML
+                 )
+             else:
+                 logging.info("Sending new pinned message")
+                 sent_message = await bot.send_message(
+                     chat_id=chat_id,
+                     text=message,
+-                    parse_mode=ParseMode.HTML
++                    parse_mode=ParseMode.HTML  # Убедитесь, что здесь указан режим разбора HTML
+                 )
+                 pinned_message_id[chat_id] = sent_message.message_id
+                 await bot.pin_chat_message(
+@@ -437,14 +442,15 @@ async def update_pinned_message(chat_id: int, bot) -> None:
+                     text="Произошла ошибка при обновлении списка задач. Пожалуйста, попробуйте позже."
+                 )
+ 
+-        # Обработка случая, когда нет задач
++            # Обработка случая, когда нет задач
+         if not tasks and chat_id in pinned_message_id:
+             try:
+                 logging.info(f"Editing existing pinned message {pinned_message_id[chat_id]} (no tasks)")
+                 await bot.edit_message_text(
+                     chat_id=chat_id,
+                     message_id=pinned_message_id[chat_id],
+-                    text="Нет задач."
++                    text="Нет задач.",
++                    parse_mode=ParseMode.HTML  # Убедитесь, что здесь указан режим разбора HTML
+                 )
+             except (BadRequest, Forbidden) as e:
+                 logging.error(f"Failed to edit pinned message: {e}")
+-- 
+2.45.1.windows.1
+

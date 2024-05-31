@@ -1,0 +1,76 @@
+From 5c2f597cca792af2d198512794698f4c5dcc7eed Mon Sep 17 00:00:00 2001
+From: vovagusev <v@vovagusev.ru>
+Date: Fri, 31 May 2024 01:59:31 +0400
+Subject: [PATCH 25/28] Remove unnecessary (Not Assigned) labels from task list
+ display
+
+---
+ mybot/bot.py | 30 +++++++++++++++++-------------
+ 1 file changed, 17 insertions(+), 13 deletions(-)
+
+diff --git a/mybot/bot.py b/mybot/bot.py
+index ff74d49..5c121dc 100644
+--- a/mybot/bot.py
++++ b/mybot/bot.py
+@@ -351,14 +351,19 @@ async def done_task(update: Update, context: CallbackContext) -> None:
+ 
+ # Функция для обновления закрепленного сообщения
+ async def format_task_with_assignee(task_item, index, bot, chat_id):
++    logging.info(f"Formatting task {task_item}")
+     if task_item is None:
+         return ""
+-    assignee = task_item.get('assignee', {})
+-    assignee_name = await get_assignee_name(bot, chat_id, assignee.get('id')) if assignee else ""
++    assignee = task_item.get('assignee')
++    assignee_name = await get_assignee_name(bot, chat_id, assignee.get('id')) if assignee and assignee.get(
++        'id') is not None else ""
+     if task_item['status'] == 'Завершена':
+-        return f"{index + 1}. <s>{task_item['task']}</s>" + (f" ({assignee_name})" if assignee_name else "")
++        result = f"{index + 1}. <s>{task_item['task']}</s>" + (f" ({assignee_name})" if assignee_name else "")
+     else:
+-        return f"{index + 1}. {task_item['task']}" + (f" ({assignee_name})" if assignee_name else "")
++        result = f"{index + 1}. {task_item['task']}" + (f" ({assignee_name})" if assignee_name else "")
++
++    logging.info(f"Formatted task: {result}")
++    return result
+ 
+ 
+ async def update_pinned_message(chat_id: int, bot) -> None:
+@@ -371,18 +376,17 @@ async def update_pinned_message(chat_id: int, bot) -> None:
+         rework_tasks = []
+         done_tasks = []
+ 
+-        for i, task in enumerate(tasks):
+-            formatted_task = await format_task_with_assignee(task, i, bot, chat_id)
+-
+-            if task['status'] == 'Не начата':
++        for i, task_item in enumerate(tasks):
++            formatted_task = await format_task_with_assignee(task_item, i, bot, chat_id)
++            if task_item['status'] == 'Не начата':
+                 not_started_tasks.append(formatted_task)
+-            elif task['status'] == 'В процессе':
++            elif task_item['status'] == 'В процессе':
+                 in_progress_tasks.append(formatted_task)
+-            elif task['status'] == 'На проверке':
++            elif task_item['status'] == 'На проверке':
+                 review_tasks.append(formatted_task)
+-            elif task['status'] == 'Переделать':
++            elif task_item['status'] == 'Переделать':
+                 rework_tasks.append(formatted_task)
+-            elif task['status'] == 'Завершена':
++            elif task_item['status'] == 'Завершена':
+                 done_tasks.append(formatted_task)
+ 
+         message = "<b>Список задач:</b>\n\n"
+@@ -435,7 +439,7 @@ async def update_pinned_message(chat_id: int, bot) -> None:
+                     text="Произошла ошибка при обновлении списка задач. Пожалуйста, попробуйте позже."
+                 )
+ 
+-            # Обработка случая, когда нет задач
++        # Обработка случая, когда нет задач
+         if not tasks and chat_id in pinned_message_id:
+             try:
+                 logging.info(f"Editing existing pinned message {pinned_message_id[chat_id]} (no tasks)")
+-- 
+2.45.1.windows.1
+

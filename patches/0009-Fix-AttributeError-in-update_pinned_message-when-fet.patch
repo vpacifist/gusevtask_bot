@@ -1,0 +1,31 @@
+From aa3d9263501ac3e104de87d4376e706cf6c8d130 Mon Sep 17 00:00:00 2001
+From: vovagusev <v@vovagusev.ru>
+Date: Thu, 30 May 2024 21:24:13 +0400
+Subject: [PATCH 09/28] Fix AttributeError in update_pinned_message when
+ fetching assignee ID for tasks without an assignee.
+
+---
+ mybot/bot.py | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/mybot/bot.py b/mybot/bot.py
+index 26beafa..9545ebe 100644
+--- a/mybot/bot.py
++++ b/mybot/bot.py
+@@ -228,10 +228,10 @@ async def add_task(update: Update, context: CallbackContext) -> None:
+         logging.warning("Empty task text provided")
+ 
+ 
+-async def get_assignee_name(bot, chat_id, assignee_id):
+-    if assignee_id is not None:  # Проверяем на None вместо пустого словаря
++async def get_assignee_name(bot, chat_id, assignee_data):
++    if assignee_data is not None and 'id' in assignee_data:  # Добавлена проверка на None
+         try:
+-            assignee_user = await bot.get_chat_member(chat_id, assignee_id)
++            assignee_user = await bot.get_chat_member(chat_id, assignee_data['id'])
+             return assignee_user.user.full_name
+         except BadRequest:
+             return "Неизвестный пользователь"
+-- 
+2.45.1.windows.1
+

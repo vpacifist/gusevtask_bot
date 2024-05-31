@@ -1,0 +1,71 @@
+From 0f7bf431d77d0d0b2732ecbd903af49cfef4721b Mon Sep 17 00:00:00 2001
+From: vovagusev <v@vovagusev.ru>
+Date: Thu, 30 May 2024 22:39:25 +0400
+Subject: [PATCH 16/28] Fix error handling for updating pinned messages when
+ the message is not found
+
+---
+ mybot/bot.py | 33 +++++++++++++++++++--------------
+ 1 file changed, 19 insertions(+), 14 deletions(-)
+
+diff --git a/mybot/bot.py b/mybot/bot.py
+index 335b769..8da745d 100644
+--- a/mybot/bot.py
++++ b/mybot/bot.py
+@@ -461,6 +461,10 @@ async def update_pinned_message(chat_id: int, bot) -> None:
+                     parse_mode=ParseMode.HTML
+                 )
+             else:
++                raise BadRequest("Pinned message not found")
++        except (TelegramError, BadRequest) as e:
++            logging.error(f"Error updating pinned message: {e}")
++            try:
+                 logging.info("Sending new pinned message")
+                 sent_message = await bot.send_message(
+                     chat_id=chat_id,
+@@ -472,19 +476,19 @@ async def update_pinned_message(chat_id: int, bot) -> None:
+                     chat_id=chat_id,
+                     message_id=sent_message.message_id
+                 )
+-        except TelegramError as e:
+-            logging.error(f"Error updating pinned message: {e}")
+-            if isinstance(e, (BadRequest, Forbidden)):
+-                await bot.send_message(
+-                    chat_id=chat_id,
+-                    text="⚠️ У меня недостаточно прав для закрепления сообщений. "
+-                         "Пожалуйста, сделайте меня администратором и дайте право закреплять сообщения. 🙏"
+-                )
+-            else:
+-                await bot.send_message(
+-                    chat_id=chat_id,
+-                    text="Произошла ошибка при обновлении списка задач. Пожалуйста, попробуйте позже."
+-                )
++            except TelegramError as e:
++                logging.error(f"Error sending new pinned message: {e}")
++                if isinstance(e, (BadRequest, Forbidden)):
++                    await bot.send_message(
++                        chat_id=chat_id,
++                        text="⚠️ У меня недостаточно прав для закрепления сообщений. "
++                             "Пожалуйста, сделайте меня администратором и дайте право закреплять сообщения. 🙏"
++                    )
++                else:
++                    await bot.send_message(
++                        chat_id=chat_id,
++                        text="Произошла ошибка при обновлении списка задач. Пожалуйста, попробуйте позже."
++                    )
+ 
+         if not tasks and chat_id in pinned_message_id:
+             try:
+@@ -494,7 +498,8 @@ async def update_pinned_message(chat_id: int, bot) -> None:
+                     message_id=pinned_message_id[chat_id],
+                     text="Нет задач."
+                 )
+-            except (BadRequest, Forbidden) as e:logging.error(f"Failed to edit pinned message: {e}")
++            except (BadRequest, Forbidden) as e:
++                logging.error(f"Failed to edit pinned message: {e}")
+ 
+ 
+ async def help_command(update: Update, _context: CallbackContext) -> None:
+-- 
+2.45.1.windows.1
+

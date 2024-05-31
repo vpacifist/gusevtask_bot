@@ -1,0 +1,34 @@
+From 38141f1d67800feff572cb78d037048325388dd2 Mon Sep 17 00:00:00 2001
+From: vovagusev <v@vovagusev.ru>
+Date: Thu, 30 May 2024 22:17:24 +0400
+Subject: [PATCH 12/28] Fix pinned message update in update_pinned_message
+ function to handle assignee name correctly
+
+---
+ mybot/bot.py | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/mybot/bot.py b/mybot/bot.py
+index 819bfd8..309e8cb 100644
+--- a/mybot/bot.py
++++ b/mybot/bot.py
+@@ -421,7 +421,7 @@ async def update_pinned_message(chat_id: int, bot) -> None:
+         done_tasks = []
+ 
+         for i, task in enumerate(tasks):
+-            assignee_name = await get_assignee_name(bot, chat_id, task.get('assignee', {}).get('id'))
++            assignee_name = await get_assignee_name(bot, chat_id, task.get('assignee', {}))
+ 
+             if task['status'] == 'Не начата':
+                 not_started_tasks.append(f"{i + 1}. {task['task']} ({assignee_name})")
+@@ -484,7 +484,6 @@ async def update_pinned_message(chat_id: int, bot) -> None:
+                     text="Произошла ошибка при обновлении списка задач. Пожалуйста, попробуйте позже."
+                 )
+ 
+-            # Обработка случая, когда нет задач
+         if not tasks and chat_id in pinned_message_id:  # Добавлен этот блок
+             try:
+                 logging.info(f"Editing existing pinned message {pinned_message_id[chat_id]} (no tasks)")
+-- 
+2.45.1.windows.1
+

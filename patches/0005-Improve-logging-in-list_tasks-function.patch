@@ -1,0 +1,52 @@
+From b023d209d1a9740200676c2d9fb750dfbeaaef2e Mon Sep 17 00:00:00 2001
+From: vovagusev <v@vovagusev.ru>
+Date: Thu, 30 May 2024 16:29:12 +0400
+Subject: [PATCH 05/28] Improve logging in list_tasks function
+
+---
+ mybot/bot.py | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/mybot/bot.py b/mybot/bot.py
+index 709b5a6..49e97dd 100644
+--- a/mybot/bot.py
++++ b/mybot/bot.py
+@@ -137,7 +137,6 @@ def save_state(updated_chat_tasks, updated_pinned_message_id):
+         logging.error(f"Error saving state to database: {e}")
+ 
+ 
+-
+ # Загрузка состояния при запуске
+ load_state()
+ atexit.register(lambda: save_state(chat_tasks, pinned_message_id))
+@@ -228,7 +227,6 @@ async def add_task(update: Update, context: CallbackContext) -> None:
+         logging.warning("Empty task text provided")
+ 
+ 
+-
+ async def get_assignee_name(bot, chat_id, assignee_id):
+     if assignee_id is not None:  # Проверяем на None вместо пустого словаря
+         try:
+@@ -259,7 +257,7 @@ async def list_tasks(update: Update, context: CallbackContext) -> None:
+             assignee_name = "Не назначен"
+             if task.get('assignee'):
+                 assignee_name = await get_assignee_name(context.bot, chat_id, task['assignee'].get('id'))
+-            if task['status'] == 'Завершена':  # Проверяем статус задачи
++            if task['status'] == 'Завершена':
+                 return f"{index + 1}. <s>{task['task']} ({assignee_name})</s>"
+             else:
+                 return f"{index + 1}. {task['task']} ({assignee_name})"
+@@ -302,8 +300,10 @@ async def list_tasks(update: Update, context: CallbackContext) -> None:
+             message += "<b>Завершены:</b>\n" + "\n".join(done_tasks) + "\n\n"
+ 
+         await update.message.reply_text(message, parse_mode=ParseMode.HTML)
++        logging.info(f"Sent task list to chat {chat_id}")
+     else:
+         await update.message.reply_text("Нет задач.", parse_mode=ParseMode.HTML)
++        logging.info(f"No tasks found for chat {chat_id}")
+ 
+ 
+ # Обработчик команды /delete
+-- 
+2.45.1.windows.1
+

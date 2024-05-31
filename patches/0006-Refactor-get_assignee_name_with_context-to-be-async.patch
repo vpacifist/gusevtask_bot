@@ -1,0 +1,28 @@
+From cd78b9d0b4966db4ec1378859a571cea334b5631 Mon Sep 17 00:00:00 2001
+From: vovagusev <v@vovagusev.ru>
+Date: Thu, 30 May 2024 16:47:08 +0400
+Subject: [PATCH 06/28] Refactor get_assignee_name_with_context to be async
+
+---
+ mybot/bot.py | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/mybot/bot.py b/mybot/bot.py
+index 49e97dd..611ce54 100644
+--- a/mybot/bot.py
++++ b/mybot/bot.py
+@@ -238,9 +238,9 @@ async def get_assignee_name(bot, chat_id, assignee_id):
+         return "Не назначен"
+ 
+ 
+-def get_assignee_name_with_context(context, task):
++async def get_assignee_name_with_context(context, task):
+     assignee_data = task.get('assignee', None)
+-    return get_assignee_name(context.bot, context.effective_chat.id, assignee_data)
++    return await get_assignee_name(context.bot, context.effective_chat.id, assignee_data)
+ 
+ 
+ # Обработчик команды /list
+-- 
+2.45.1.windows.1
+

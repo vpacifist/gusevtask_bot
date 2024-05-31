@@ -1,0 +1,75 @@
+From 9863a9ea7b929cd137ee981105fff4d11c1b6edc Mon Sep 17 00:00:00 2001
+From: vovagusev <v@vovagusev.ru>
+Date: Fri, 31 May 2024 00:11:40 +0400
+Subject: [PATCH 22/28] Fix issue with NoneType and improve task formatting
+
+---
+ mybot/bot.py | 38 +++++++++++++-------------------------
+ 1 file changed, 13 insertions(+), 25 deletions(-)
+
+diff --git a/mybot/bot.py b/mybot/bot.py
+index 3a45722..fca4c42 100644
+--- a/mybot/bot.py
++++ b/mybot/bot.py
+@@ -350,20 +350,15 @@ async def done_task(update: Update, context: CallbackContext) -> None:
+ 
+ 
+ # Функция для обновления закрепленного сообщения
+-async def format_task_with_assignee(task_item, index, task_chat_id, task_bot):
+-    assignee_name = None
+-    if task_item.get('assignee'):
+-        assignee_name = await get_assignee_name(task_bot, task_chat_id, task_item['assignee'].get('id'))
++async def format_task_with_assignee(task_item, index, bot, chat_id):
++    if task_item is None:
++        return ""
++    assignee = task_item.get('assignee', {})
++    assignee_name = await get_assignee_name(bot, chat_id, assignee.get('id')) if assignee else ""
+     if task_item['status'] == 'Завершена':
+-        if assignee_name:
+-            return f"{index + 1}. <s>{task_item['task']} ({assignee_name})</s>"
+-        else:
+-            return f"{index + 1}. <s>{task_item['task']}</s>"
++        return f"{index + 1}. <s>{task_item['task']}</s>" + (f" ({assignee_name})" if assignee_name else "")
+     else:
+-        if assignee_name:
+-            return f"{index + 1}. {task_item['task']} ({assignee_name})"
+-        else:
+-            return f"{index + 1}. {task_item['task']}"
++        return f"{index + 1}. {task_item['task']}" + (f" ({assignee_name})" if assignee_name else "")
+ 
+ 
+ async def update_pinned_message(chat_id: int, bot) -> None:
+@@ -377,24 +372,17 @@ async def update_pinned_message(chat_id: int, bot) -> None:
+         done_tasks = []
+ 
+         for i, task_item in enumerate(tasks):
+-            assignee_name = await get_assignee_name(bot, chat_id, task_item.get('assignee', {}).get('id'))
+-
++            formatted_task = await format_task_with_assignee(task_item, i, bot, chat_id)
+             if task_item['status'] == 'Не начата':
+-                not_started_tasks.append(
+-                    f"{i + 1}. {task_item['task']}" + (f" ({assignee_name})" if assignee_name else "")
+-                )
++                not_started_tasks.append(formatted_task)
+             elif task_item['status'] == 'В процессе':
+-                in_progress_tasks.append(
+-                    f"{i + 1}. {task_item['task']}" + (f" ({assignee_name})" if assignee_name else "")
+-                )
++                in_progress_tasks.append(formatted_task)
+             elif task_item['status'] == 'На проверке':
+-                review_tasks.append(f"{i + 1}. {task_item['task']}" + (f" ({assignee_name})" if assignee_name else ""))
++                review_tasks.append(formatted_task)
+             elif task_item['status'] == 'Переделать':
+-                rework_tasks.append(f"{i + 1}. {task_item['task']}" + (f" ({assignee_name})" if assignee_name else ""))
++                rework_tasks.append(formatted_task)
+             elif task_item['status'] == 'Завершена':
+-                done_tasks.append(
+-                    f"{i + 1}. <s>{task_item['task']}</s>" + (f" ({assignee_name})" if assignee_name else "")
+-                )
++                done_tasks.append(formatted_task)
+ 
+         message = "<b>Список задач:</b>\n\n"
+ 
+-- 
+2.45.1.windows.1
+

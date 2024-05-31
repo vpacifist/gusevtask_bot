@@ -1,0 +1,60 @@
+From 5d6ac4dedb9aa6ae49521c355fcf17085d45181a Mon Sep 17 00:00:00 2001
+From: vovagusev <v@vovagusev.ru>
+Date: Thu, 30 May 2024 16:19:45 +0400
+Subject: [PATCH 02/28] Unify database path using DB_PATH constant
+
+---
+ mybot/bot.py | 9 +++++----
+ 1 file changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/bot.py b/bot.py
+index 609ee8a..850ba97 100644
+--- a/mybot/bot.py
++++ b/mybot/bot.py
+@@ -20,6 +20,7 @@ TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+ # Словарь для хранения задач для каждого чата - ОБЪЯВЛЕНИЕ ГЛОБАЛЬНЫХ ПЕРЕМЕННЫХ
+ chat_tasks = {}
+ pinned_message_id = {}
++DB_PATH = '/root/mybot/mydatabase.db'
+ 
+ 
+ # Функция для создания таблиц в базе данных
+@@ -45,7 +46,7 @@ def create_tables():
+ 
+ 
+ def create_users_table():
+-    with sqlite3.connect('/root/mybot/mydatabase.db') as conn:
++    with sqlite3.connect(DB_PATH) as conn:
+         cursor = conn.cursor()
+         cursor.execute('''
+             CREATE TABLE IF NOT EXISTS users (
+@@ -65,7 +66,7 @@ def load_state():
+     global chat_tasks, pinned_message_id
+ 
+     try:
+-        with sqlite3.connect('/root/mybot/mydatabase.db') as conn:
++        with sqlite3.connect(DB_PATH) as conn:
+             logging.info("Connected to the database")
+             cursor = conn.cursor()
+ 
+@@ -104,7 +105,7 @@ def save_state(updated_chat_tasks, updated_pinned_message_id):
+     global chat_tasks, pinned_message_id
+ 
+     try:
+-        with sqlite3.connect('/root/mybot/mydatabase.db') as conn:
++        with sqlite3.connect(DB_PATH) as conn:
+             cursor = conn.cursor()
+ 
+             # Сохраняем задачи
+@@ -146,7 +147,7 @@ async def start(update: Update, context: CallbackContext) -> None:
+ 
+     # Сохраняем chat_id и user_id в базу данных
+     try:
+-        with sqlite3.connect('/root/mybot/mydatabase.db') as conn:
++        with sqlite3.connect(DB_PATH) as conn:
+             cursor = conn.cursor()
+             cursor.execute(
+                 "INSERT OR IGNORE INTO users (chat_id, user_id) VALUES (?, ?)",
+-- 
+2.45.1.windows.1
+
