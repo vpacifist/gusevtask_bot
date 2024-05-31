@@ -316,6 +316,12 @@ async def edit_task(update: Update, context: CallbackContext) -> None:
 
 
 # Обработчик команды /my_id
+async def user_id_command(update: Update):
+    user_id = update.effective_user.id
+    await update.message.reply_text(f"ваш ID: {user_id}")
+
+
+# Обработчик команды /chat_id
 async def chat_id_command(update: Update):
     chat_id = update.effective_chat.id
     await update.message.reply_text(f"ID этого чата: {chat_id}")
@@ -532,7 +538,8 @@ async def help_command(update: Update, _context: CallbackContext) -> None:
 
 Служебные команды:
 /save_state - сохранить состояние бота
-/my_id - узнать ID текущего чата
+/my_id - узнать ваш ID
+/chat_id - узнать ID этого чата
 /list - показать список задач
 
 /help - показать эту справку
@@ -623,7 +630,8 @@ app.add_handler(CommandHandler("rework", lambda update, context: set_task_status
 app.add_handler(CommandHandler("edit", edit_task))
 app.add_handler(CommandHandler("save_state", save_state_handler))
 app.add_handler(CommandHandler("help", help_command))
-app.add_handler(CommandHandler("my_id", lambda update, _: chat_id_command(update)))
+app.add_handler(CommandHandler("my_id", lambda update, _: user_id_command(update)))
+app.add_handler(CommandHandler("chat_id", lambda update, _: chat_id_command(update)))
 app.add_handler(CommandHandler("assign", assign_task))
 
 
