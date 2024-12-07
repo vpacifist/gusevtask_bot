@@ -10,7 +10,7 @@ from telegram.error import BadRequest, Forbidden
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levellevelname)s - %(message)s', level=logging.INFO)
 
-TOKEN = '7366654801:AAHKDNUKs72KtPvmcK_NcS32O0on_diqfiE'
+TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 STATE_FILE = 'bot_state.json'
 
 # Словарь для хранения задач для каждого чата
